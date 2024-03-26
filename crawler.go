@@ -53,9 +53,9 @@ func CrawlPage(url string) []*Contestant {
 
 		if rank != 0 {
 			contestants = append(contestants, &Contestant{
-				Rank:       rank,
-				Rating:     before,
-				NeedRating: after,
+				Rank:        rank,
+				Rating:      before,
+				AfterRating: after,
 			})
 		}
 	})
