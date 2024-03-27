@@ -2,13 +2,24 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"math"
 	"os"
+	"sort"
+	"time"
+
+	"github.com/duke-git/lancet/v2/mathutil"
 )
 
 func main() {
+	contest := 1946
+	now := time.Now()
+	defer func() {
+		fmt.Printf("time.Since(now): %v\n", time.Since(now))
+	}()
+
 	// read rating json
-	data, err := os.ReadFile("1943.json")
+	data, err := os.ReadFile(fmt.Sprintf("%d.json", contest))
 	if err != nil {
 		panic(err)
 	}
@@ -18,7 +29,7 @@ func main() {
 		panic(err)
 	}
 
-	// calculate win seed
+	// calculate seed
 	for _, ci := range contestants {
 		ci.Seed = 1
 		for _, cj := range contestants {
@@ -35,6 +46,9 @@ func main() {
 		c.Delta = (c.NeedRating - c.Rating) / 2
 	}
 
+	// 赛前 rating 从大到小
+	sort.Slice(contestants, func(i, j int) bool { return contestants[i].Rating > contestants[j].Rating })
+
 	// total sum should not be more than zero.
 	sum := 0
 	for _, c := range contestants {
@@ -46,13 +60,30 @@ func main() {
 	}
 
 	// sum of top-4*sqrt should be adjusted to zero.
-	// sum = 0
-	// size := float64(len(contestants))
-	// zeroSumCount := int(math.Min(4*math.Round(math.Sqrt(size)), size))
+	sum = 0
+	size := float64(len(contestants))
+	zeroSumCount := mathutil.Min(int(4*math.Round(math.Sqrt(size))), int(size))
+	for i := 0; i < zeroSumCount; i++ {
+		sum += contestants[i].Delta
+	}
+	inc = mathutil.Min(mathutil.Max(-sum/zeroSumCount, -10), 0)
+	for _, c := range contestants {
+		c.Delta += inc
+	}
 
-	// for _, c := range contestants {
-	// 	fmt.Printf("%v->%v(%v)\n", c.Rating, c.AfterRating, c.Rating+c.Delta)
-	// }
+	validateDeltas(contestants)
+
+	// write result
+	file, err := os.Create(fmt.Sprintf("%d.res", contest))
+	if err != nil {
+		panic(err)
+	}
+	defer file.Close()
+	for _, c := range contestants {
+		bytes, _ := json.Marshal(c)
+		file.WriteString(string(bytes))
+		file.WriteString("\n")
+	}
 }
 
 func getEloWinProbability(a, b float64) float64 {
@@ -83,4 +114,32 @@ func getSeed(rating int, contestants []*Contestant) float64 {
 	}
 
 	return result
+}
+
+func validateDeltas(contestants []*Contestant) {
+	sort.Slice(contestants, func(i, j int) bool { return contestants[i].Rank < contestants[j].Rank })
+
+	for i := 0; i < len(contestants); i++ {
+		for j := i + 1; j < len(contestants); j++ {
+			if contestants[i].Rating > contestants[j].Rating {
+				if contestants[i].Rating+contestants[i].Delta < contestants[j].Rating+contestants[j].Delta {
+					fmt.Printf("First rating invariant fialed: (%v->%v) vs. (%v->%v)\n",
+						contestants[i].Rating,
+						contestants[i].Rating+contestants[i].Delta,
+						contestants[j].Rating,
+						contestants[j].Rating+contestants[j].Delta,
+					)
+				}
+			}
+
+			if contestants[i].Rating < contestants[j].Rating {
+				if contestants[i].Delta < contestants[j].Delta {
+					fmt.Printf("Second rating invariant fialed: %v vs. %v\n",
+						contestants[i].Delta,
+						contestants[j].Delta,
+					)
+				}
+			}
+		}
+	}
 }
