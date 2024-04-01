@@ -107,7 +107,7 @@ func (contestants Contestants) sortByPointsDesc() {
 }
 
 func (contestants Contestants) getRatingToRank(rank float64) int {
-	left, right := 1, 8000
+	left, right := -8000, 8000
 
 	for right-left > 1 {
 		mid := (left + right) / 2
