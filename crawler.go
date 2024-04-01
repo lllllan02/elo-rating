@@ -13,7 +13,7 @@ import (
 
 func CrawlContest(id, start, end int) {
 	contestants := make([]*Contestant, 0, (end-start)*100)
-	for i := start; i < end; i++ {
+	for i := start; i <= end; i++ {
 		url := fmt.Sprintf("https://codeforces.com/contest/%d/ratings/page/%d", id, i)
 		contestants = append(contestants, CrawlPage(url)...)
 	}
@@ -55,7 +55,7 @@ func CrawlPage(url string) []*Contestant {
 			contestants = append(contestants, &Contestant{
 				Rank:        rank,
 				Rating:      before,
-				AfterRating: after,
+				FinalRating: after,
 			})
 		}
 	})
